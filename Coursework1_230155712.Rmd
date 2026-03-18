@@ -1,0 +1,129 @@
+---
+title: "MTH6139 Time Series" 
+subtitle: "Coursework 1 -- 230155712" 
+author: "Morgan Jordan-Ferguson" 
+date: "Spring term 2025" 
+output: 
+  html_document:
+    toc: true
+    toc_float: true
+    theme: spacelab 
+    highlight: tango
+---
+ 
+```{r, echo=FALSE}
+# This code will display the QMUL logo at the top right of the page
+# Do not change this code
+htmltools::img(src = knitr::image_uri("images/QMlogo.png"),
+               alt = 'logo',
+               style = 'position:absolute; top:0; right:0; padding:10px; width:20%;')
+```
+
+# **Section 1: Project Aim**
+
+#
+The aim of this project is to analyse a time series and produce forecasts for future values.The co2 dataset is used to identify important features such as long term trends and seasonal patterns. Visualisations and a simple regression model are used to understand how co2 levels changed over the time, and Meta's Prophet model is used to generate forecasts and future values.
+
+#
+A time series is a sequence of data points recorded in chronological order at regular intervals. It is used to track changes over time, identify trends,and make forecasts.
+
+#
+co2 is a dataset about how Mauna Loa Atmospheric CO2 changed on a monthly basis from 1959 to 1997. It is expressed in parts per million.
+
+# **Section 2: Brief history on Mauna Loa**
+
+![](images/Maunaloa.jpeg.webp)
+
+Mauna Loa, which means "Long Mountain" in Hawaiian, is the world’s largest active volcano, covering over half of the Big Island of Hawaii. While its peak reaches 13,681 feet above sea level, it actually rises more than 30,000 feet from the ocean floor—making it technically taller than Mount Everest when measured from its base. Since its first documented eruption in 1843, it has erupted 34 times, including a significant recent event in late 2022. Its massive scale and geological activity make it a unique landmark, but its true global fame comes from its role as a sentinel for the Earth's atmosphere.
+
+In 1958, scientist Charles David Keeling began recording atmospheric CO2 levels at the Mauna Loa Observatory, situated high on the volcano's northern slope. These measurements created the "Keeling Curve," which is the longest continuous record of CO2 in the world. This data provided the first definitive evidence that carbon dioxide levels were rising annually due to human activity. It also captured the "seasonal breath" of the planet—the distinct zig-zag pattern seen in your dataset, caused by Northern Hemisphere plants absorbing CO2 during the summer growing season and releasing it back into the air during winter.
+
+The location was chosen specifically for its extreme isolation and altitude. Sitting at 11,135 feet, the observatory is positioned above the "inversion layer," allowing it to sample "well-mixed" air from the free troposphere rather than local pollution from cities or nearby continents. Because the facility is surrounded by miles of barren lava rock with no nearby vegetation or industry to interfere with the readings, the data collected at Mauna Loa is considered the global gold standard for tracking the chemical changes in our planet's atmosphere.
+
+# **Data Analysis and Forecasting**
+
+#
+**Load libraries**
+```{r echo=TRUE,message=FALSE,warning=FALSE}
+library(prophet)
+```
+library(prophet) loads the Prophet package, which was developed by Meta (Facebook).
+
+```{r echo=TRUE,message=FALSE,warning=FALSE}
+library(zoo)
+```
+library(zoo) is a library used for managing time-series data and dates.
+
+# 
+**co2: Monthly Atmospheric CO2 concentrations at Mauna Loa Observatory**
+```{r echo=TRUE}
+data(co2)
+time_values = time(co2)
+co2_dates = as.Date(as.yearmon(time_values))
+```
+data(co2) command tells R to pull the Mauna Loa Atmospheric CO2 dataset out of its internal library and load it into your workspace.
+
+The time(co2) function looks at the dataset and extracts only the "time" information, ignoring the actual CO2 levels for a moment.
+
+o2_dates = as.Date(as.yearmon(time_values)) acts as a two-step translator that turns messy computer decimals into a clear calendar format. First, it identifies which month and year the decimal represents, such as turning 1959.08 into February 1959. Finally, it assigns that month a specific day so the computer can accurately plot the data on a standard timeline. This process transforms abstract numbers into a professional date format that both people and forecasting tools can easily understand.
+
+#
+**Creating a professional dataframe for Prophet**
+
+```{r echo=TRUE}
+co2_dataframe = data.frame(ds = co2_dates, y = as.numeric(co2))
+```
+This line of code organises your data into a structured table, known in R as a dataframe, which acts like a simplified spreadsheet with specific rows and columns. It renames your dates to "ds" and your CO2 values to "y" because those are the exact labels required by the Prophet forecasting tool to identify the timeline and the values it needs to predict. 
+
+By using the "as.numeric" command, the code also ensures that the CO2 levels are stripped of any complex time-series formatting and treated as simple, clean numbers ready for mathematical modeling.
+
+#
+**Modelling**
+
+```{r echo=TRUE}
+co2_model = prophet(co2_dataframe)
+```
+This line of code is the "Model Training" phase, where the computer actually learns the patterns in your data.
+
+#
+**Forecasting 8 periods ahead**
+
+```{r echo=TRUE}
+future_data = make_future_dataframe(co2_model, periods = 8)
+forecast_results = predict(co2_model,future_data)
+```
+This code prepares the foundation for your forecast by creating a new, empty timeline that extends beyond your original dataset. It looks at the very last month in your 1997 data and automatically appends eight new monthly rows for the computer to eventually fill with predictions. By creating this "future dataframe," this gives the model a specific window of time to look into so it knows exactly where to calculate and place its upcoming CO2 estimates.
+
+#
+**Visualisation**
+
+```{r echo=TRUE}
+plot(co2_model, forecast_results)
+```
+The black dots show co2 levels zig-zagging up and down every single year; this is just yearly photosynthesis. Even with those yearly wobbles, the entire line is clearly climbing higher and higher over time. The solid blue line at the end is the computer's best guess for what will happen in the next 8 months, while the light blue shading around it is a "safety net" showing the range where the real numbers are most likely to land.
+
+#
+**Visualising the linear regression trend line over the original data**
+
+```{r echo=TRUE}
+co2_linear_model = lm(y ~ ds, data = co2_dataframe)
+summary(co2_linear_model)
+plot(co2_dataframe$ds, co2_dataframe$y, type = "l",
+     main = "CO2 Concentrations with Linear Trend",
+     xlab = "Year", ylab = "CO2 (ppm)")
+abline(co2_linear_model, col = "red", lwd = 2)
+```
+
+Based on the image above, the Mauna Loa CO2 data exhibits a remarkably strong and consistent positive linear trend over the 1959–1997 period. The linear regression line (the red abline) acts as a "line of best fit" that captures the long-term increase in atmospheric carbon dioxide, which rose from approximately 315 ppm to over 360 ppm during this timeframe.
+
+The mathematical strength of this relationship is confirmed by the R-squared value, also known as the coefficient of determination. This statistic measures the proportion of variance in the CO2 levels that can be predicted from the passage of time. An R-squared value close to 1 indicates that the model explains nearly all the variability in the data; for this dataset, the exceptionally high R-squared proves that the upward trend is the dominant force, even if the model does not perfectly account for the smaller seasonal oscillations caused by changing rates of photosynthesis throughout the year.
+
+Because the actual curve shows a slight upward curvature (acceleration) toward the later years, the linear model slightly under-predicts the values at the ends of the series and over-predicts in the middle. Consequently, despite the high R-squared value, the presence of these patterns suggests that a quadratic or non-linear term might provide an even more precise fit to account for the accelerating rate of change.
+
+# **Section 3: Conclusion**
+
+This analysis of the Mauna Loa CO2 dataset successfully demonstrates the transition from statistical theory to real-world application. By utilising both simple linear regression and Meta’s Prophet model, we were able to quantify a significant and consistent increase in atmospheric carbon dioxide from 1959 to 1997. The linear model provided a clear overview of the trajectory, while the Prophet model successfully captured the seasonal changes of the planet, those annual oscillations driven by photosynthesis.
+
+Our findings highlight a critical nuance in time-series modelling: while a linear trend offers a helpful broad overview, the data's slight upward curvature suggests that the rate of CO2 accumulation is actually accelerating. The 8-month forecast produced by the Prophet model further confirms that, in the short term, these concentrations are expected to continue their upward trajectory while maintaining their characteristic seasonal pattern.
+
+In conclusion, this project illustrates how time-series tools allow us to decode complex environmental signals. The Mauna Loa data is more than just a list of numbers; it is a historical record of our changing atmosphere. By applying these statistical methods, we can better understand past trends and provide the reliable forecasts necessary to address global environmental challenges.
